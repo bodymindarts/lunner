@@ -2,11 +2,10 @@ mod config;
 
 use config::*;
 use std::{
-    process::Command,
     sync::Arc,
     time::{Duration, SystemTime},
 };
-use tokio::sync::RwLock;
+use tokio::{process::Command, sync::RwLock};
 use tokio_postgres::{Client, IsolationLevel, NoTls, Statement};
 
 const CREATE_TABLE: &'static str =
@@ -33,16 +32,22 @@ async fn main() -> Result<(), anyhow::Error> {
         if is_leader != currently_leader {
             if is_leader {
                 println!("[lunner] Executing become-leader hook");
-                Command::new(&conf.hooks.become_leader.cmd)
+                let mut child = Command::new(&conf.hooks.become_leader.cmd)
                     .args(&conf.hooks.become_leader.args)
                     .spawn()
                     .expect("[lunner] Couldn't execute hook");
+                tokio::spawn(async move {
+                    let _ = child.wait().await;
+                });
             } else {
                 println!("[lunner] Executing become-standby hook");
-                Command::new(&conf.hooks.become_standby.cmd)
+                let mut child = Command::new(&conf.hooks.become_standby.cmd)
                     .args(&conf.hooks.become_standby.args)
                     .spawn()
                     .expect("[lunner] Couldn't execute hook");
+                tokio::spawn(async move {
+                    let _ = child.wait().await;
+                });
             }
         }
         currently_leader = is_leader;
