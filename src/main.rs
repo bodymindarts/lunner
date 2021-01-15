@@ -22,8 +22,16 @@ const INNER_LOOP_SECONDS: u64 = 10;
 async fn main() -> Result<(), anyhow::Error> {
     let conf = Config::load()?;
     let state = State::new();
+    println!("[lunner] Executing become-standby hook");
+    let mut child = Command::new(&conf.hooks.become_standby.cmd)
+        .args(&conf.hooks.become_standby.args)
+        .spawn()
+        .expect("[lunner] Couldn't execute hook");
+    tokio::spawn(async move {
+        let _ = child.wait().await;
+    });
     run_pg_loop(state.clone()).await?;
-    let mut inner_loop = tokio::time::interval(Duration::new(INNER_LOOP_SECONDS, 0));
+    let mut inner_loop = tokio::time::interval(Duration::new(INNER_LOOP_SECONDS / 2, 0));
     let mut currently_leader = false;
     loop {
         inner_loop.tick().await;
