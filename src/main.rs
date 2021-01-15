@@ -36,7 +36,7 @@ async fn main() -> Result<(), anyhow::Error> {
     loop {
         inner_loop.tick().await;
         let is_leader = state.is_leader().await;
-        println!("[lunner] testing if state has changed");
+        println!("[lunner] Testing if state has changed");
         if is_leader != currently_leader {
             if is_leader {
                 println!("[lunner] Executing become-leader hook");
